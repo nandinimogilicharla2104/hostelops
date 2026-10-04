@@ -190,7 +190,30 @@ def get_complaint(
             detail="You do not have permission to view complaints"
         )
 
-    return complaint
+    technician_name = None
+
+    if complaint.assigned_technician_id is not None:
+        technician_user = db.query(User).filter(
+            User.id == complaint.assigned_technician_id
+        ).first()
+
+        if technician_user:
+            technician_name = technician_user.name
+
+    return ComplaintResponse(
+        id=complaint.id,
+        student_id=complaint.student_id,
+        room_id=complaint.room_id,
+        category_id=complaint.category_id,
+        title=complaint.title,
+        description=complaint.description,
+        priority=complaint.priority,
+        status=complaint.status,
+        assigned_technician_id=complaint.assigned_technician_id,
+        assigned_technician_name=technician_name,
+        created_at=complaint.created_at,
+        updated_at=complaint.updated_at
+    )
 
 @router.patch("/{complaint_id}/status", response_model=ComplaintResponse)
 def update_status(

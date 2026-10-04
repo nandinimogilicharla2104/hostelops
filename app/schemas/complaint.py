@@ -37,6 +37,7 @@ class ComplaintResponse(BaseModel):
     priority: str
     status: str
     assigned_technician_id: int | None
+    assigned_technician_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
