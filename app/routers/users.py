@@ -87,6 +87,7 @@ def login_user(
         }
     }
 
+
 @router.get("/me")
 def get_my_profile(
     current_user: User = Depends(get_current_user)
@@ -97,7 +98,9 @@ def get_my_profile(
             "id": current_user.id,
             "name": current_user.name,
             "email": current_user.email,
+            "phone": current_user.phone,
             "role": current_user.role,
+            "is_active": current_user.is_active,
         }
     }
 
