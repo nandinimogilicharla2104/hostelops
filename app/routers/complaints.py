@@ -323,6 +323,10 @@ async def upload_complaint_attachment(
         raise
     except Exception as exc:
         db.rollback()
+        print(
+            f"Attachment upload failed: "
+            f"{type(exc).__name__}: {exc}"
+        )
         raise HTTPException(
             status_code=502,
             detail="The attachment could not be uploaded. Please try again.",
