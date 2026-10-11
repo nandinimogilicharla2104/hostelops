@@ -122,3 +122,37 @@ export async function updateComplaintStatus(complaintId, status) {
     }),
   })
 }
+
+
+export async function uploadComplaintAttachment(complaintId, file) {
+  const token = localStorage.getItem("hostelops_token")
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch(
+    `${API_BASE_URL}/complaints/${complaintId}/attachments`,
+    {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to upload attachment")
+  }
+
+  return data
+}
+
+export async function getComplaintAttachments(complaintId) {
+  return apiRequest(`/complaints/${complaintId}/attachments`)
+}
+
+export async function getComplaintAttachmentUrl(complaintId, attachmentId) {
+  return apiRequest(
+    `/complaints/${complaintId}/attachments/${attachmentId}/url`
+  )
+}

@@ -43,6 +43,7 @@ import {
   getTechnicianDashboard,
   getAssignedComplaints,
   updateComplaintStatus,
+  uploadComplaintAttachment,
 } from "../services/api"
 
 import { getMyProfile } from "../services/api"
@@ -1285,6 +1286,44 @@ function CreateComplaint() {
     }))
   }
 
+  const handleFilesChange = (event) => {
+  const files = Array.from(event.target.files || [])
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+  ]
+
+  if (files.length > 5) {
+    setFileError("You can attach up to 5 files.")
+    event.target.value = ""
+    return
+  }
+
+  const invalidFile = files.find((file) => {
+    const maxSize = file.type.startsWith("image/")
+      ? 10 * 1024 * 1024
+      : 50 * 1024 * 1024
+
+    return !allowedTypes.includes(file.type) || file.size > maxSize
+  })
+
+  if (invalidFile) {
+    setFileError(
+      "Use JPEG, PNG, WebP, MP4, WebM, or MOV. Images: max 10 MB; videos: max 50 MB."
+    )
+    event.target.value = ""
+    return
+  }
+
+  setFileError("")
+  setSelectedFiles(files)
+}
+
+
   const [categories, setCategories] = useState([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoriesError, setCategoriesError] = useState("")
@@ -1292,6 +1331,9 @@ function CreateComplaint() {
   const [submitError, setSubmitError] = useState("")
   const [roomLoading, setRoomLoading] = useState(true)
   const [roomError, setRoomError] = useState("")
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [fileError, setFileError] = useState("")
+
 
   const handleSubmit = async () => {
     setSubmitError("")
@@ -1327,7 +1369,12 @@ function CreateComplaint() {
         category_id: Number(form.category_id),
       })
 
+      for (const file of selectedFiles) {
+        await uploadComplaintAttachment(complaint.id, file)
+      }
+
       navigate(`/complaints/${complaint.id}`)
+
     } catch (error) {
       setSubmitError(error.message)
     } finally {
@@ -1632,6 +1679,65 @@ function CreateComplaint() {
               </p>
             </div>
           </div>
+
+          {/* Attachments */}
+<div>
+  <label
+    htmlFor="complaint-attachments"
+    className="block text-sm font-semibold text-slate-800"
+  >
+    Photos or videos (optional)
+  </label>
+
+  <p className="mt-1 text-xs text-slate-500">
+    Attach up to 5 files to help the maintenance team understand the issue.
+    Images up to 10 MB; videos up to 50 MB each.
+  </p>
+
+  <input
+    id="complaint-attachments"
+    type="file"
+    accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+    multiple
+    onChange={handleFilesChange}
+    className="mt-3 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
+  />
+
+  {fileError && (
+    <p role="alert" className="mt-2 text-sm text-red-600">
+      {fileError}
+    </p>
+  )}
+
+  {selectedFiles.length > 0 && (
+    <ul className="mt-3 space-y-2">
+      {selectedFiles.map((file, index) => (
+        <li
+          key={`${file.name}-${file.lastModified}-${index}`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        >
+          <span className="min-w-0 truncate text-slate-700">
+            {file.name}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedFiles((current) =>
+                current.filter((_, fileIndex) => fileIndex !== index)
+              )
+              setFileError("")
+            }}
+            className="shrink-0 font-medium text-red-600 hover:text-red-700"
+          >
+            Remove
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
 
           {/* Actions */}
           <div className="border-t border-slate-100 pt-6">

@@ -7,6 +7,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.database.base import Base
+import app.models.complaint_attachment
 
 from app.models.user import User
 from app.models.hostel import Hostel

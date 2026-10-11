@@ -1,5 +1,20 @@
+import os
+from uuid import uuid4
+
+import cloudinary
+import cloudinary.uploader
+
+from fastapi import File, UploadFile
+from app.core.cloudinary_config import configure_cloudinary
+from app.models.complaint import Complaint
+from app.models.complaint_attachment import ComplaintAttachment
+from app.schemas.complaint_attachment import ComplaintAttachmentResponse
+
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+
+from cloudinary.utils import cloudinary_url
 
 from app.core.dependencies import (
     get_current_user,
@@ -214,6 +229,224 @@ def get_complaint(
         created_at=complaint.created_at,
         updated_at=complaint.updated_at
     )
+
+
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+MAX_VIDEO_SIZE = 50 * 1024 * 1024
+
+
+@router.post(
+    "/{complaint_id}/attachments",
+    response_model=ComplaintAttachmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_complaint_attachment(
+    complaint_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    complaint = get_complaint_by_id(db=db, complaint_id=complaint_id)
+
+    if complaint is None:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # Apply the same complaint-access rules as the detail endpoint.
+    if current_user.role == "student":
+        allowed = complaint.student_id == current_user.id
+    elif current_user.role == "technician":
+        allowed = complaint.assigned_technician_id == current_user.id
+    elif current_user.role == "warden":
+        room = db.query(Room).filter(Room.id == complaint.room_id).first()
+        block = (
+            db.query(Block).filter(Block.id == room.block_id).first()
+            if room else None
+        )
+        allowed = block is not None and block.hostel_id == current_user.hostel_id
+    elif current_user.role == "admin":
+        allowed = True
+    else:
+        allowed = False
+
+    if not allowed:
+        raise HTTPException(status_code=403, detail="You cannot access this complaint")
+
+    content_type = (file.content_type or "").lower()
+    if content_type in ALLOWED_IMAGE_TYPES:
+        resource_type = "image"
+        max_size = MAX_IMAGE_SIZE
+    elif content_type in ALLOWED_VIDEO_TYPES:
+        resource_type = "video"
+        max_size = MAX_VIDEO_SIZE
+    else:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file type. Upload a JPEG, PNG, WebP, MP4, WebM, or QuickTime video.",
+        )
+
+    contents = await file.read(max_size + 1)
+    if not contents:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+    if len(contents) > max_size:
+        raise HTTPException(status_code=413, detail="The file exceeds the allowed size")
+
+    public_id = f"complaint_{complaint_id}_{uuid4().hex}"
+
+    try:
+        configure_cloudinary()
+        result = cloudinary.uploader.upload(
+            contents,
+            resource_type=resource_type,
+            folder=f"hostelops/complaints/{complaint_id}",
+            public_id=public_id,
+            type="authenticated",
+            overwrite=False,
+        )
+
+        attachment = ComplaintAttachment(
+            complaint_id=complaint_id,
+            uploaded_by=current_user.id,
+            resource_type=resource_type,
+            storage_public_id=result["public_id"],
+            file_url=result["secure_url"],
+            original_filename=os.path.basename(file.filename or "upload"),
+        )
+        db.add(attachment)
+        db.commit()
+        db.refresh(attachment)
+        return attachment
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail="The attachment could not be uploaded. Please try again.",
+        ) from exc
+    finally:
+        await file.close()
+
+
+@router.get(
+    "/{complaint_id}/attachments",
+    response_model=list[ComplaintAttachmentResponse],
+)
+def list_complaint_attachments(
+    complaint_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Reuse the existing complaint endpoint's authorization checks.
+    complaint = get_complaint_by_id(
+        db=db,
+        complaint_id=complaint_id,
+    )
+
+    if complaint is None:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    if current_user.role == "student":
+        allowed = complaint.student_id == current_user.id
+    elif current_user.role == "technician":
+        allowed = complaint.assigned_technician_id == current_user.id
+    elif current_user.role == "warden":
+        room = db.query(Room).filter(Room.id == complaint.room_id).first()
+        block = (
+            db.query(Block).filter(Block.id == room.block_id).first()
+            if room else None
+        )
+        allowed = block is not None and block.hostel_id == current_user.hostel_id
+    elif current_user.role == "admin":
+        allowed = True
+    else:
+        allowed = False
+
+    if not allowed:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot access this complaint",
+        )
+
+    return (
+        db.query(ComplaintAttachment)
+        .filter(ComplaintAttachment.complaint_id == complaint_id)
+        .order_by(ComplaintAttachment.created_at.desc())
+        .all()
+    )
+
+
+@router.get(
+    "/{complaint_id}/attachments/{attachment_id}/url",
+)
+def get_complaint_attachment_url(
+    complaint_id: int,
+    attachment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    complaint = get_complaint_by_id(
+        db=db,
+        complaint_id=complaint_id,
+    )
+
+    if complaint is None:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # Enforce the same access rules used by the complaint detail endpoint.
+    if current_user.role == "student":
+        allowed = complaint.student_id == current_user.id
+    elif current_user.role == "technician":
+        allowed = complaint.assigned_technician_id == current_user.id
+    elif current_user.role == "warden":
+        room = db.query(Room).filter(Room.id == complaint.room_id).first()
+        block = (
+            db.query(Block).filter(Block.id == room.block_id).first()
+            if room else None
+        )
+        allowed = block is not None and block.hostel_id == current_user.hostel_id
+    elif current_user.role == "admin":
+        allowed = True
+    else:
+        allowed = False
+
+    if not allowed:
+        raise HTTPException(status_code=403, detail="You cannot access this complaint")
+
+    attachment = (
+        db.query(ComplaintAttachment)
+        .filter(
+            ComplaintAttachment.id == attachment_id,
+            ComplaintAttachment.complaint_id == complaint_id,
+        )
+        .first()
+    )
+
+    if attachment is None:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    try:
+        configure_cloudinary()
+
+        url, _ = cloudinary_url(
+            attachment.storage_public_id,
+            resource_type=attachment.resource_type,
+            type="authenticated",
+            sign_url=True,
+            secure=True,
+            version=None,
+        )
+
+        return {"url": url}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not generate the attachment URL",
+        ) from exc
+
 
 @router.patch("/{complaint_id}/status", response_model=ComplaintResponse)
 def update_status(
