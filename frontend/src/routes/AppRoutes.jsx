@@ -16,7 +16,7 @@ import {
   ClipboardList,
 } from "lucide-react"
 
-import { Routes, Route, useNavigate, useParams } from "react-router-dom"
+import { Routes, Route,Navigate, useNavigate, useParams } from "react-router-dom"
 import AppLayout from "../components/layout/AppLayout"
 import Login from "../pages/Login"
 import ProtectedRoute from "./ProtectedRoute"
