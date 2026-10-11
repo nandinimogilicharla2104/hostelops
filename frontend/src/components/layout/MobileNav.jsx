@@ -32,13 +32,13 @@ function MobileNav() {
             { label: "Overview", path: "/", icon: LayoutDashboard },
             { label: "Complaints", path: "/complaints", icon: ClipboardList },
             { label: "Maintenance", path: "/maintenance", icon: Wrench },
+            
             {
-  label: "Analytics",
-  path: "/analytics",
-  icon: ChartNoAxesCombined,
-},
-            { label: "Analytics", path: "/analytics", icon: ChartNoAxesCombined },
-            { label: "Analytics", path: "/analytics", icon: ChartNoAxesCombined },
+              label: "Analytics",
+              path: "/analytics",
+              icon: ChartNoAxesCombined,
+            },
+
             { label: "Notifications", path: "/notifications", icon: Bell },
           ]
         : role === "TECHNICIAN"

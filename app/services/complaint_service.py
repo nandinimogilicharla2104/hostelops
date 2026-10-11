@@ -226,8 +226,9 @@ def assign_complaint(
     if block is None:
         raise HostelOpsException("Block not found")
 
-    technician = (
-        db.query(Technician)
+    
+    query = (
+        db.query(Technician, TechnicianSkill)
         .join(
             TechnicianSkill,
             Technician.id == TechnicianSkill.technician_id
@@ -236,35 +237,62 @@ def assign_complaint(
             TechnicianSkill.category_id == complaint.category_id,
             Technician.availability_status == "AVAILABLE"
         )
-        .order_by(
-            (Technician.hostel_id != block.hostel_id).asc(),
-            TechnicianSkill.skill_level.desc(),
-            Technician.current_workload.asc()
-        )
-        .first()
     )
+
+    candidates = query.all()
+
+    if not candidates:
+        raise HostelOpsException(
+            "No qualified technician available"
+        )
+
+    # Higher-priority complaints prefer more experienced technicians.
+    priority_skill = {
+        "LOW": 1,
+        "MEDIUM": 2,
+        "HIGH": 3,
+        "CRITICAL": 4,
+    }.get((complaint.priority or "MEDIUM").upper(), 2)
+
+    technician, technician_skill = min(
+        candidates,
+        key=lambda candidate: (
+            candidate[1].skill_level < priority_skill,
+            candidate[0].hostel_id != block.hostel_id,
+            -candidate[1].skill_level,
+            candidate[0].current_workload,
+            candidate[0].id,
+        )
+    )
+
 
     if technician is None:
         raise HostelOpsException(
             "No qualified technician available"
         )
 
+    
     old_status = complaint.status
     old_technician_id = complaint.assigned_technician_id
 
-    if old_technician_id is not None:
-        old_technician = db.query(Technician).filter(
-            Technician.user_id == old_technician_id
-        ).first()
+    # Update workload only when the assigned technician changes.
+    if old_technician_id != technician.user_id:
+        if old_technician_id is not None:
+            old_technician = db.query(Technician).filter(
+                Technician.user_id == old_technician_id
+            ).first()
 
-        if old_technician is not None and old_technician.id != technician.id:
-            if old_technician.current_workload > 0:
+            if (
+                old_technician is not None
+                and old_technician.current_workload > 0
+            ):
                 old_technician.current_workload -= 1
+
+        technician.current_workload += 1
 
     complaint.assigned_technician_id = technician.user_id
     complaint.status = "ASSIGNED"
 
-    technician.current_workload += 1
 
     history = ComplaintHistory(
         complaint_id=complaint.id,
