@@ -44,6 +44,8 @@ import {
   getAssignedComplaints,
   updateComplaintStatus,
   uploadComplaintAttachment,
+  getComplaintAttachments,
+getComplaintAttachmentUrl,
 } from "../services/api"
 
 import { getMyProfile } from "../services/api"
@@ -76,6 +78,7 @@ function Dashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [statusError, setStatusError] = useState("")
   const [statusSuccess, setStatusSuccess] = useState("")
+  const [attachments, setAttachments] = useState([])
 
   
 useEffect(() => {
@@ -3052,24 +3055,28 @@ function ComplaintDetails() {
   const [statusError, setStatusError] = useState("")
   const [statusSuccess, setStatusSuccess] = useState("")
   
-  useEffect(() => {
-    const fetchComplaint = async () => {
-      try {
-        setLoading(true)
-        setError("")
+  
+useEffect(() => {
+  const fetchComplaint = async () => {
+    try {
+      setLoading(true)
+      setError("")
 
-        const data = await getComplaint(complaintId)
+      const data = await getComplaint(complaintId)
+      setComplaint(data)
 
-        setComplaint(data)
-      } catch (error) {
-        setError(error.message)
-      } finally {
-        setLoading(false)
-      }
+      const files = await getComplaintAttachments(complaintId)
+      setAttachments(files)
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchComplaint()
-  }, [complaintId])
+  fetchComplaint()
+}, [complaintId])
+
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -3311,6 +3318,27 @@ const handleUpdateStatus = async () => {
           </div>
         </div>
       </div>
+
+
+      
+      {/* Complaint Attachments */}
+      {attachments.length > 0 && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Photos & Videos
+          </h2>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {attachments.map((attachment) => (
+              <AttachmentPreview
+                key={attachment.id}
+                complaintId={complaintId}
+                attachment={attachment}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
 
       <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -3827,6 +3855,68 @@ const handleUpdateStatus = async () => {
     </div>
   )
 }
+
+
+
+function AttachmentPreview({ complaintId, attachment }) {
+  const [url, setUrl] = useState("")
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    getComplaintAttachmentUrl(complaintId, attachment.id)
+      .then((data) => {
+        if (active) setUrl(data.url)
+      })
+      .catch(() => {
+        if (active) setFailed(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [complaintId, attachment.id])
+
+  if (failed) {
+    return (
+      <p className="text-sm text-slate-500">
+        Could not load this attachment.
+      </p>
+    )
+  }
+
+  if (!url) {
+    return <p className="text-sm text-slate-500">Loading attachment...</p>
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200">
+      {attachment.resource_type === "image" ? (
+        <a href={url} target="_blank" rel="noreferrer">
+          <img
+            src={url}
+            alt={attachment.original_filename}
+            className="h-56 w-full object-cover"
+            loading="lazy"
+          />
+        </a>
+      ) : (
+        <video
+          src={url}
+          controls
+          preload="metadata"
+          className="max-h-80 w-full bg-black"
+        />
+      )}
+
+      <p className="truncate px-3 py-2 text-xs text-slate-600">
+        {attachment.original_filename}
+      </p>
+    </div>
+  )
+}
+
 
 function AppRoutes() {
   return (
