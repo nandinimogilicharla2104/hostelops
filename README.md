@@ -370,7 +370,13 @@ Submit a hostel maintenance complaint with the relevant details and attachments.
 
 HostelOps demonstrates practical full-stack development, REST API design, relational database management, authentication and authorization, cloud file storage, schema migrations, and production deployment.
 
+## Live Demo
 
+**[Open HostelOps Web Application](https://hostelops-frontend.onrender.com/)**
+
+**[View Source Code on GitHub](https://github.com/nandinimogilicharla2104/hostelops)**
+
+**[Explore Backend API Documentation](https://hostelops-api.onrender.com/docs)**
 
 \## Author
 
