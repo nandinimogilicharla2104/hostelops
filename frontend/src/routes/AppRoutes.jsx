@@ -3365,8 +3365,8 @@ const handleUpdateStatus = async () => {
 
 
       {/* Summary */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
+      <div className="grid grid-cols-1 items-start gap-4">
+        <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             Status
           </p>
