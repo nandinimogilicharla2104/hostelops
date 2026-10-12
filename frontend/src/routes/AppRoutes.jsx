@@ -78,7 +78,7 @@ function Dashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [statusError, setStatusError] = useState("")
   const [statusSuccess, setStatusSuccess] = useState("")
-  const [attachments, setAttachments] = useState([])
+  
 
   
 useEffect(() => {
@@ -3037,6 +3037,7 @@ function ComplaintDetails() {
   const { user } = useAuth()
 
   const [complaint, setComplaint] = useState(null)
+  const [attachments, setAttachments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [history, setHistory] = useState([])
@@ -3054,6 +3055,7 @@ function ComplaintDetails() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [statusError, setStatusError] = useState("")
   const [statusSuccess, setStatusSuccess] = useState("")
+  
   
   
 useEffect(() => {
