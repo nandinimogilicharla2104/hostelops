@@ -3392,7 +3392,7 @@ const handleUpdateStatus = async () => {
             </p>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                 <DoorOpen size={18} />
