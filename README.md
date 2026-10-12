@@ -66,6 +66,10 @@ HostelOps helps students report maintenance problems, enables staff to manage co
 
 
 
+\## System Architecture
+
+
+
 ```mermaid
 
 flowchart TD
@@ -76,13 +80,13 @@ flowchart TD
 
 &#x20;   A\["FastAPI REST API"]
 
-&#x20;   AU\["JWT Authentication \& Role-Based Authorization"]
+&#x20;   AU\["JWT Authentication and Role-Based Authorization"]
 
-&#x20;   S\["Complaint Management \& Assignment"]
+&#x20;   S\["Complaint Management and Assignment"]
 
 &#x20;   D\[("Neon PostgreSQL")]
 
-&#x20;   C\["Cloudinary - Private Photo/Video Storage"]
+&#x20;   C\["Cloudinary Private Photo/Video Storage"]
 
 &#x20;   M\["Alembic Database Migrations"]
 
@@ -107,6 +111,14 @@ flowchart TD
 &#x20;   F -. hosted on .-> R
 
 &#x20;   A -. hosted on .-> R
+
+```
+
+
+
+
+
+\## Complaint Workflow
 
 
 
@@ -151,6 +163,8 @@ CLOSED
 ```
 
 
+
+The workflow provides visibility into maintenance progress and helps staff coordinate complaint resolution.
 
 The workflow provides visibility into maintenance progress and helps staff coordinate complaint resolution.
 
